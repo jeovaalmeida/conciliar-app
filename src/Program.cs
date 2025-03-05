@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using OfficeOpenXml;
 using ConciliarApp.Services;
-using ConciliarApp.Models; // Adicione esta linha para usar a classe LancamentoExcel
+using ConciliarApp.Models; // Adicione esta linha para usar as classes LancamentoExcel e LancamentoExtrato
 
 namespace ConciliarApp
 {
@@ -32,15 +32,10 @@ namespace ConciliarApp
             (int qtdLancamentosExcel, decimal totalExcel, HashSet<LancamentoExcel> lancamentosExcel) = conciliacaoService.ProcessarArquivoExcel(caminhoArquivoExcel, cartao);
 
             // Processar o arquivo TXT
-            (int qtdLancamentosTxt, decimal totalTxt, List<(DateTime, decimal, string)> lancamentosTxt) = conciliacaoService.ProcessarArquivoTxt(caminhoArquivoTxt);
+            (int qtdLancamentosTxt, decimal totalTxt, List<LancamentoExtrato> lancamentosTxt) = conciliacaoService.ProcessarArquivoTxt(caminhoArquivoTxt);
 
             // Exibir a diferença entre o Excel e o TXT
-            Console.WriteLine();
-            Console.WriteLine($"Diferença entre Extrato x Excel");
-            var diferenca = qtdLancamentosTxt - qtdLancamentosExcel;
-            var sinal = diferenca < 0 ? "-" : diferenca > 0 ? "+" : "";
-            Console.WriteLine($"  Qtde de lançamentos: {sinal}{diferenca}");
-            Console.WriteLine($"  Valor: {(totalTxt - totalExcel).ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
+            conciliacaoService.ExibirDiferencaEntreExtratoEExcel(qtdLancamentosTxt, qtdLancamentosExcel, totalTxt, totalExcel);
 
             // Exibir lançamentos que estão no extrato e não estão no Excel
             conciliacaoService.ExibirLancamentosNoExtratoENaoNoExcel(lancamentosTxt, lancamentosExcel);

@@ -4,8 +4,8 @@ using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using OfficeOpenXml;
-using ConciliarApp.Extensions; // Adicione esta linha para usar o método de extensão
-using ConciliarApp.Models; // Adicione esta linha para usar a classe LancamentoExcel
+using ConciliarApp.Extensions;
+using ConciliarApp.Models; // Adicione esta linha para usar as classes LancamentoExcel e LancamentoExtrato
 
 namespace ConciliarApp.Services
 {
@@ -73,14 +73,14 @@ namespace ConciliarApp.Services
             }
         }
 
-        public (int, decimal, List<(DateTime, decimal, string)>) ProcessarArquivoTxt(string caminhoArquivo)
+        public (int, decimal, List<LancamentoExtrato>) ProcessarArquivoTxt(string caminhoArquivo)
         {
             try
             {
                 var linhas = File.ReadAllLines(caminhoArquivo);
                 int qtdLancamentosValidos = 0;
                 decimal valorTotal = 0;
-                List<(DateTime, decimal, string)> lancamentosTxt = new List<(DateTime, decimal, string)>();
+                List<LancamentoExtrato> lancamentosTxt = new List<LancamentoExtrato>();
                 Console.WriteLine();
                 Console.WriteLine("LANÇAMENTOS DO EXTRATO");
 
@@ -95,7 +95,13 @@ namespace ConciliarApp.Services
 
                         if (LancamentoEhValido(parteData, parteValor, out DateTime dataConvertida, out decimal valorConvertido))
                         {
-                            lancamentosTxt.Add((dataConvertida, valorConvertido, descricao));
+                            lancamentosTxt.Add(new LancamentoExtrato
+                            {
+                                Data = dataConvertida,
+                                Valor = valorConvertido,
+                                Descricao = descricao,
+                                ExisteNoExcel = false
+                            });
                             Console.WriteLine($"Data: {dataConvertida.ToString("dd/MM/yyyy")}, Descrição: {descricao}, Valor: {valorConvertido.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
                             valorTotal += valorConvertido;
                             qtdLancamentosValidos++;
@@ -111,26 +117,26 @@ namespace ConciliarApp.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"Erro ao processar o arquivo TXT: {ex.Message}");
-                return (0, 0, new List<(DateTime, decimal, string)>());
+                return (0, 0, new List<LancamentoExtrato>());
             }
         }
 
-        public void ExibirLancamentosNoExtratoENaoNoExcel(List<(DateTime, decimal, string)> lancamentosTxt, HashSet<LancamentoExcel> lancamentosExcel)
+        public void ExibirLancamentosNoExtratoENaoNoExcel(List<LancamentoExtrato> lancamentosTxt, HashSet<LancamentoExcel> lancamentosExcel)
         {
-            var lancamentosNaoNoExcel = new List<(DateTime, decimal, string)>();
+            var lancamentosNaoNoExcel = new List<LancamentoExtrato>();
 
             foreach (var lancamento in lancamentosTxt)
             {
-                if (lancamento.Item3.Contains("ANUIDADE DIFERENCIADA") || lancamento.Item3.Contains("DESC AUTOMATICO ANUD") || EhStreaming(lancamento.Item3))
+                if (lancamento.Descricao.Contains("ANUIDADE DIFERENCIADA") || lancamento.Descricao.Contains("DESC AUTOMATICO ANUD") || EhStreaming(lancamento.Descricao))
                 {
-                    if (!lancamentosExcel.Any(e => e.Valor == lancamento.Item2))
+                    if (!lancamentosExcel.Any(e => e.Valor == lancamento.Valor))
                     {
                         lancamentosNaoNoExcel.Add(lancamento);
                     }
                 }
                 else
                 {
-                    if (!lancamentosExcel.Any(e => e.Data == lancamento.Item1 && e.Valor == lancamento.Item2))
+                    if (!lancamentosExcel.Any(e => e.Data == lancamento.Data && e.Valor == lancamento.Valor))
                     {
                         lancamentosNaoNoExcel.Add(lancamento);
                     }
@@ -142,20 +148,20 @@ namespace ConciliarApp.Services
             decimal valorTotal = 0;
             foreach (var lancamento in lancamentosNaoNoExcel)
             {
-                string descricaoTruncada = lancamento.Item3.Truncate(50); // Truncar a descrição para 50 caracteres
-                Console.WriteLine($"Data: {lancamento.Item1.ToString("dd/MM/yyyy")}, Descrição: {descricaoTruncada}, Valor: {lancamento.Item2.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
-                valorTotal += lancamento.Item2;
+                string descricaoTruncada = lancamento.Descricao.Truncate(50); // Truncar a descrição para 50 caracteres
+                Console.WriteLine($"Data: {lancamento.Data.ToString("dd/MM/yyyy")}, Descrição: {descricaoTruncada}, Valor: {lancamento.Valor.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
+                valorTotal += lancamento.Valor;
             }
             Console.WriteLine($"Total Geral: {valorTotal.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
         }
 
-        public void ExibirLancamentosNoExcelENaoNoExtrato(HashSet<LancamentoExcel> lancamentosExcel, List<(DateTime, decimal, string)> lancamentosTxt, List<LancamentoExcel> lancamentosComPequenaDiferenca)
+        public void ExibirLancamentosNoExcelENaoNoExtrato(HashSet<LancamentoExcel> lancamentosExcel, List<LancamentoExtrato> lancamentosTxt, List<LancamentoExcel> lancamentosComPequenaDiferenca)
         {
             var lancamentosNaoNoExtrato = new List<LancamentoExcel>();
 
             foreach (var lancamento in lancamentosExcel)
             {
-                if (!lancamentosTxt.Any(t => t.Item1 == lancamento.Data && t.Item2 == lancamento.Valor) && !lancamento.DiferencaDePequenoValor)
+                if (!lancamentosTxt.Any(t => t.Data == lancamento.Data && t.Valor == lancamento.Valor) && !lancamento.DiferencaDePequenoValor)
                 {
                     lancamento.NaoExisteNoExtrato = true;
                     lancamentosNaoNoExtrato.Add(lancamento);
@@ -174,16 +180,17 @@ namespace ConciliarApp.Services
             Console.WriteLine($"Total Geral: {valorTotal.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
         }
 
-        public List<LancamentoExcel> ExibirLancamentosComPequenaDiferenca(List<(DateTime, decimal, string)> lancamentosTxt, HashSet<LancamentoExcel> lancamentosExcel)
+        public List<LancamentoExcel> ExibirLancamentosComPequenaDiferenca(List<LancamentoExtrato> lancamentosTxt, HashSet<LancamentoExcel> lancamentosExcel)
         {
             var lancamentosComPequenaDiferenca = new List<LancamentoExcel>();
 
             foreach (var lancamentoTxt in lancamentosTxt)
             {
-                var lancamentoExcel = lancamentosExcel.FirstOrDefault(e => e.Data == lancamentoTxt.Item1 && Math.Abs(e.Valor - lancamentoTxt.Item2) <= 0.15m);
+                var lancamentoExcel = lancamentosExcel.FirstOrDefault(e => e.Data == lancamentoTxt.Data && Math.Abs(e.Valor - lancamentoTxt.Valor) <= 0.15m);
                 if (lancamentoExcel != null)
                 {
                     lancamentoExcel.DiferencaDePequenoValor = true;
+                    lancamentoTxt.ExisteNoExcel = true;
                     lancamentosComPequenaDiferenca.Add(lancamentoExcel);
                 }
             }
@@ -200,6 +207,16 @@ namespace ConciliarApp.Services
             Console.WriteLine($"Total Geral: {valorTotal.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
 
             return lancamentosComPequenaDiferenca;
+        }
+
+        public void ExibirDiferencaEntreExtratoEExcel(int qtdLancamentosTxt, int qtdLancamentosExcel, decimal totalTxt, decimal totalExcel)
+        {
+            Console.WriteLine();
+            Console.WriteLine($"Diferença entre Extrato x Excel");
+            var diferenca = qtdLancamentosTxt - qtdLancamentosExcel;
+            var sinal = diferenca < 0 ? "-" : diferenca > 0 ? "+" : "";
+            Console.WriteLine($"  Qtde de lançamentos: {sinal}{diferenca}");
+            Console.WriteLine($"  Valor: {(totalTxt - totalExcel).ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
         }
 
         private bool EhStreaming(string descricao)
