@@ -4,7 +4,8 @@ using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using OfficeOpenXml;
-using ConciliarApp.Services; // Certifique-se de que esta linha está presente
+using ConciliarApp.Services;
+using ConciliarApp.Models; // Adicione esta linha para usar a classe LancamentoExcel
 
 namespace ConciliarApp
 {
@@ -28,7 +29,7 @@ namespace ConciliarApp
             var conciliacaoService = new ConciliacaoService();
 
             // Processar o arquivo Excel
-            (int qtdLancamentosExcel, decimal totalExcel, HashSet<(DateTime, decimal)> lancamentosExcel) = conciliacaoService.ProcessarArquivoExcel(caminhoArquivoExcel, cartao);
+            (int qtdLancamentosExcel, decimal totalExcel, HashSet<LancamentoExcel> lancamentosExcel) = conciliacaoService.ProcessarArquivoExcel(caminhoArquivoExcel, cartao);
 
             // Processar o arquivo TXT
             (int qtdLancamentosTxt, decimal totalTxt, List<(DateTime, decimal, string)> lancamentosTxt) = conciliacaoService.ProcessarArquivoTxt(caminhoArquivoTxt);
@@ -45,7 +46,10 @@ namespace ConciliarApp
             conciliacaoService.ExibirLancamentosNoExtratoENaoNoExcel(lancamentosTxt, lancamentosExcel);
 
             // Exibir lançamentos que estão em ambos, mas têm diferença de valor de até 15 centavos
-            conciliacaoService.ExibirLancamentosComPequenaDiferenca(lancamentosTxt, lancamentosExcel);
+            var lancamentosComPequenaDiferenca = conciliacaoService.ExibirLancamentosComPequenaDiferenca(lancamentosTxt, lancamentosExcel);
+
+            // Exibir lançamentos que estão no Excel e não estão no extrato
+            conciliacaoService.ExibirLancamentosNoExcelENaoNoExtrato(lancamentosExcel, lancamentosTxt, lancamentosComPequenaDiferenca);
         }
     }
 }
