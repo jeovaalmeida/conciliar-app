@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using OfficeOpenXml;
 using ConciliarApp.Services;
-using ConciliarApp.Models; // Adicione esta linha para usar as classes LancamentoExcel e LancamentoExtrato
+using ConciliarApp.Models;
 
 namespace ConciliarApp
 {
@@ -22,29 +22,36 @@ namespace ConciliarApp
             string cartao = args[0].ToUpper();
             string nomeArquivoTxt = args[1];
             string caminhoArquivoTxt = Path.Combine(@"C:\Users\jeova\OneDrive\FileSync\Extratos", nomeArquivoTxt);
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial; // Definindo o contexto da licença
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
             string caminhoArquivoExcel = @"C:\Users\jeova\OneDrive\FileSync\_ControleFin\RecDesp-2025.xlsx";
 
             var conciliacaoService = new ConciliacaoService();
 
-            // Processar o arquivo Excel
-            (int qtdLancamentosExcel, decimal totalExcel, HashSet<LancamentoExcel> lancamentosExcel) = conciliacaoService.ProcessarArquivoExcel(caminhoArquivoExcel, cartao);
+            // Extrair lançamentos do extrato
+            List<LancamentoExtrato> lancamentosTxt = conciliacaoService.ExtrairLancamentosDoExtrato(caminhoArquivoTxt);
 
-            // Processar o arquivo TXT
-            (int qtdLancamentosTxt, decimal totalTxt, List<LancamentoExtrato> lancamentosTxt) = conciliacaoService.ProcessarArquivoTxt(caminhoArquivoTxt);
+            // Extrair lançamentos do Excel
+            int linhaInicial;
+            HashSet<LancamentoExcel> lancamentosExcel = conciliacaoService.ExtrairLancamentosDoExcel(caminhoArquivoExcel, cartao, out linhaInicial);
+
+            // Exibir todos os lançamentos do extrato
+            conciliacaoService.ExibirLancamentosDoExtrato(lancamentosTxt);
+
+            // Exibir todos os lançamentos do Excel
+            conciliacaoService.ExibirLancamentosDoExcel(lancamentosExcel, cartao, linhaInicial);
 
             // Exibir a diferença entre o Excel e o TXT
-            conciliacaoService.ExibirDiferencaEntreExtratoEExcel(qtdLancamentosTxt, qtdLancamentosExcel, totalTxt, totalExcel);
+            conciliacaoService.ExibirDiferencaEntreExtratoEExcel(lancamentosTxt.Count, lancamentosExcel.Count, lancamentosTxt.Sum(l => l.Valor), lancamentosExcel.Sum(l => l.Valor));
 
             // Exibir lançamentos que estão no extrato e não estão no Excel
             conciliacaoService.ExibirLancamentosNoExtratoENaoNoExcel(lancamentosTxt, lancamentosExcel);
 
+            // Exibir lançamentos que estão no Excel e não estão no extrato
+            conciliacaoService.ExibirLancamentosNoExcelENaoNoExtrato(lancamentosExcel, lancamentosTxt, new List<LancamentoExcel>());
+
             // Exibir lançamentos que estão em ambos, mas têm diferença de valor de até 15 centavos
             var lancamentosComPequenaDiferenca = conciliacaoService.ExibirLancamentosComPequenaDiferenca(lancamentosTxt, lancamentosExcel);
-
-            // Exibir lançamentos que estão no Excel e não estão no extrato
-            conciliacaoService.ExibirLancamentosNoExcelENaoNoExtrato(lancamentosExcel, lancamentosTxt, lancamentosComPequenaDiferenca);
         }
     }
 }
