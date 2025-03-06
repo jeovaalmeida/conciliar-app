@@ -31,6 +31,7 @@ namespace ConciliarApp.Services
                 {
                     string valor1aCelula = planilha.Cells[linha, 1].Text;
                     string valor2aCelula = planilha.Cells[linha, 2].Text;
+                    string valor3aCelula = planilha.Cells[linha, 3].Text;
 
                     if (valor1aCelula.Equals($"CARTÃO DE CRÉDITO: {cartao}", StringComparison.OrdinalIgnoreCase))
                     {
@@ -48,6 +49,7 @@ namespace ConciliarApp.Services
                         string valor = planilha.Cells[linha, 6].Text;
                         string data = planilha.Cells[linha, 7].Text;
                         string descricao = planilha.Cells[linha, 4].Text; // Obtendo a descrição da 4ª coluna
+                        descricao = string.IsNullOrEmpty(descricao) ? $"{valor2aCelula} - {valor3aCelula}" : descricao;
 
                         if (LancamentoEhValido(data, valor, out DateTime dataConvertida, out decimal valorConvertido))
                         {
@@ -59,7 +61,7 @@ namespace ConciliarApp.Services
                                 DiferencaDePequenoValor = false,
                                 NaoExisteNoExtrato = true
                             });
-                            Console.WriteLine($"Data: {dataConvertida.ToShortDateString()}, Descrição: {descricao}, Valor: {valorConvertido.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
+                            Console.WriteLine($"Data: {dataConvertida.ToShortDateString()}, Descrição: {descricao.Truncate(50)}, Valor: {valorConvertido.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
                             valorTotal += valorConvertido;
                             qtdLancamentosValidos++;
                         }
@@ -212,7 +214,7 @@ namespace ConciliarApp.Services
         public void ExibirDiferencaEntreExtratoEExcel(int qtdLancamentosTxt, int qtdLancamentosExcel, decimal totalTxt, decimal totalExcel)
         {
             Console.WriteLine();
-            Console.WriteLine($"Diferença entre Extrato x Excel");
+            Console.WriteLine($"Diferença entre Extrato x Excel (Extrato: {qtdLancamentosTxt}, Excel: {qtdLancamentosExcel})");
             var diferenca = qtdLancamentosTxt - qtdLancamentosExcel;
             var sinal = diferenca < 0 ? "-" : diferenca > 0 ? "+" : "";
             Console.WriteLine($"  Qtde de lançamentos: {sinal}{diferenca}");
