@@ -105,7 +105,7 @@ namespace ConciliarApp.Services
         public void ExibirLancamentosDoExcel(HashSet<LancamentoExcel> lancamentosExcel, string cartao, int linhaInicial)
         {
             Console.WriteLine();
-            Console.WriteLine($"LANÇAMENTOS DO EXCEL - CARTÃO {cartao}: {lancamentosExcel.Count}");
+            Console.WriteLine($"LANÇAMENTOS DO EXCEL: {lancamentosExcel.Count} | CARTÃO {cartao}");
             Console.WriteLine($"Iniciando a leitura dos lançamentos na linha {linhaInicial}");
             decimal valorTotal = 0;
             foreach (var lancamento in lancamentosExcel)
@@ -117,10 +117,10 @@ namespace ConciliarApp.Services
             Console.WriteLine($"Total Geral: {valorTotal.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
         }
 
-        public void ExibirLancamentosDoExtrato(List<LancamentoExtrato> lancamentosTxt)
+        public void ExibirLancamentosDoExtrato(List<LancamentoExtrato> lancamentosTxt, string nomeArquivoExtrato)
         {
             Console.WriteLine();
-            Console.WriteLine($"LANÇAMENTOS DO EXTRATO: {lancamentosTxt.Count}");
+            Console.WriteLine($"LANÇAMENTOS DO EXTRATO: {lancamentosTxt.Count} | Arquivo: {nomeArquivoExtrato}");
             decimal valorTotal = 0;
             foreach (var lancamento in lancamentosTxt)
             {
@@ -215,31 +215,37 @@ namespace ConciliarApp.Services
             Console.WriteLine($"Total Geral: {valorTotal.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
         }
 
-        public List<LancamentoExcel> ExibirLancamentosComPequenaDiferenca(List<LancamentoExtrato> lancamentosTxt, HashSet<LancamentoExcel> lancamentosExcel)
+        public HashSet<(DateTime Data, string Descricao, decimal ValorExcel, decimal ValorExtrato)> ExibirLancamentosComPequenaDiferenca(List<LancamentoExtrato> lancamentosTxt, HashSet<LancamentoExcel> lancamentosExcel)
         {
-            var lancamentosComPequenaDiferenca = new List<LancamentoExcel>();
+            var lancamentosComPequenaDiferenca = new HashSet<(DateTime Data, string Descricao, decimal ValorExcel, decimal ValorExtrato)>();
 
             foreach (var lancamentoTxt in lancamentosTxt)
             {
-                var lancamentoExcel = lancamentosExcel.FirstOrDefault(e => e.Data == lancamentoTxt.Data && Math.Abs(e.Valor - lancamentoTxt.Valor) <= 0.15m);
+                var lancamentoExcel = lancamentosExcel.FirstOrDefault(
+                    e => e.Data == lancamentoTxt.Data && 
+                    Math.Abs(e.Valor - lancamentoTxt.Valor) != 0 && 
+                    Math.Abs(e.Valor - lancamentoTxt.Valor) <= 0.15m);
                 if (lancamentoExcel != null)
                 {
                     lancamentoExcel.DiferencaDePequenoValor = true;
                     lancamentoTxt.ExisteNoExcel = true;
-                    lancamentosComPequenaDiferenca.Add(lancamentoExcel);
+                    lancamentosComPequenaDiferenca.Add((lancamentoExcel.Data, lancamentoExcel.Descricao, lancamentoExcel.Valor, lancamentoTxt.Valor));
                 }
             }
 
             Console.WriteLine();
             Console.WriteLine($"LANÇAMENTOS COM PEQUENA DIFERENÇA: {lancamentosComPequenaDiferenca.Count}");
-            decimal valorTotal = 0;
+            decimal valorTotalExcel = 0;
+            decimal valorTotalExtrato = 0;
             foreach (var lancamento in lancamentosComPequenaDiferenca)
             {
-                string descricaoTruncada = lancamento.Descricao.Truncate(50); // Truncar a descrição para 50 caracteres
-                Console.WriteLine($"Data: {lancamento.Data.ToString("dd/MM/yyyy")}, Descrição: {descricaoTruncada}, Valor: {lancamento.Valor.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
-                valorTotal += lancamento.Valor;
+                string descricaoTruncada = lancamento.Descricao.Truncate(48);
+                Console.WriteLine($"Data: {lancamento.Data.ToString("dd/MM/yyyy")}, Descrição: {descricaoTruncada}, Valor Excel: {lancamento.ValorExcel.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}, Valor Extrato: {lancamento.ValorExtrato.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
+                valorTotalExcel += lancamento.ValorExcel;
+                valorTotalExtrato += lancamento.ValorExtrato;
             }
-            Console.WriteLine($"Total Geral: {valorTotal.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
+            Console.WriteLine($"Total Geral Excel: {valorTotalExcel.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
+            Console.WriteLine($"Total Geral Extrato: {valorTotalExtrato.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
 
             return lancamentosComPequenaDiferenca;
         }

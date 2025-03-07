@@ -15,28 +15,30 @@ namespace ConciliarApp
         {
             if (args.Length < 2)
             {
-                Console.WriteLine("Por favor, informe o nome do cartão (ex: MASTER, VISA) e o nome do arquivo TXT.");
+                Console.WriteLine("Por favor, informe o nome do cartão (ex: MASTER, VISA) e o nome do arquivo de extrato (TXT).");
                 return;
             }
 
             string cartao = args[0].ToUpper();
-            string nomeArquivoTxt = args[1];
-            string caminhoArquivoTxt = Path.Combine(@"C:\Users\jeova\OneDrive\FileSync\Extratos", nomeArquivoTxt);
+            string nomeArquivoExtrato = args[1];
+            string caminhoArquivoExtrato = Path.Combine(@"C:\Users\jeova\OneDrive\FileSync\Extratos", nomeArquivoExtrato);
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
             string caminhoArquivoExcel = @"C:\Users\jeova\OneDrive\FileSync\_ControleFin\RecDesp-2025.xlsx";
 
             var conciliacaoService = new ConciliacaoService();
 
+            Console.WriteLine($"\r\n{DateTime.Now} | Iniciando processamento");
+
             // Extrair lançamentos do extrato
-            List<LancamentoExtrato> lancamentosTxt = conciliacaoService.ExtrairLancamentosDoExtrato(caminhoArquivoTxt);
+            List<LancamentoExtrato> lancamentosTxt = conciliacaoService.ExtrairLancamentosDoExtrato(caminhoArquivoExtrato);
 
             // Extrair lançamentos do Excel
             int linhaInicial;
             HashSet<LancamentoExcel> lancamentosExcel = conciliacaoService.ExtrairLancamentosDoExcel(caminhoArquivoExcel, cartao, out linhaInicial);
 
             // Exibir todos os lançamentos do extrato
-            conciliacaoService.ExibirLancamentosDoExtrato(lancamentosTxt);
+            conciliacaoService.ExibirLancamentosDoExtrato(lancamentosTxt, nomeArquivoExtrato);
 
             // Exibir todos os lançamentos do Excel
             conciliacaoService.ExibirLancamentosDoExcel(lancamentosExcel, cartao, linhaInicial);
