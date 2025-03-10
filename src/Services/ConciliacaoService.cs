@@ -12,58 +12,7 @@ namespace ConciliarApp.Services
     public class ConciliacaoService
     {
         // Métodos de extração
-        public HashSet<LancamentoExcel> ExtrairLancamentosDoExcel(string caminhoArquivo, string cartao, out int linhaInicial)
-        {
-            FileInfo arquivoInfo = new FileInfo(caminhoArquivo);
-            linhaInicial = 0;
-
-            using (ExcelPackage pacote = new ExcelPackage(arquivoInfo))
-            {
-                ExcelWorksheet planilha = pacote.Workbook.Worksheets["2025-03"];
-                int qtdLinhas = planilha.Dimension.Rows;
-                bool encontrouCartaoDeCredito = false;
-                HashSet<LancamentoExcel> lancamentosExcel = new HashSet<LancamentoExcel>();
-
-                for (int linha = 1; linha <= qtdLinhas; linha++)
-                {
-                    string valor1aCelula = planilha.Cells[linha, 1].Text;
-                    string valor2aCelula = planilha.Cells[linha, 2].Text;
-                    string valor3aCelula = planilha.Cells[linha, 3].Text;
-
-                    if (valor1aCelula.Equals($"CARTÃO DE CRÉDITO: {cartao}", StringComparison.OrdinalIgnoreCase))
-                    {
-                        encontrouCartaoDeCredito = true;
-                        linhaInicial = linha + 1;
-                    }
-                    else if (encontrouCartaoDeCredito && valor2aCelula.Equals($"TOTAL ({cartao}):", StringComparison.OrdinalIgnoreCase))
-                    {
-                        encontrouCartaoDeCredito = false;
-                    }
-                    else if (encontrouCartaoDeCredito)
-                    {
-                        string valor = planilha.Cells[linha, 6].Text;
-                        string data = planilha.Cells[linha, 7].Text;
-                        string descricao = planilha.Cells[linha, 4].Text;
-                        descricao = string.IsNullOrEmpty(descricao) ? $"{valor2aCelula} - {valor3aCelula}" : descricao;
-
-                        if (LancamentoEhValido(data, valor, out DateTime dataConvertida, out decimal valorConvertido))
-                        {
-                            lancamentosExcel.Add(new LancamentoExcel
-                            {
-                                Data = dataConvertida,
-                                Valor = valorConvertido,
-                                Descricao = descricao,
-                                DiferencaDePequenoValor = false,
-                                NaoExisteNoExtrato = true
-                            });
-                        }
-                    }
-                }
-
-                return lancamentosExcel;
-            }
-        }
-
+        
         public List<LancamentoExtrato> ExtrairLancamentosDoExtrato(string caminhoArquivo)
         {
             try
@@ -85,7 +34,7 @@ namespace ConciliarApp.Services
                             {
                                 Data = dataConvertida,
                                 Valor = valorConvertido,
-                                Descricao = descricao,
+                                Descricao = descricao.PadRight(50, ' '),
                                 ExisteNoExcel = false
                             });
                         }
@@ -99,6 +48,73 @@ namespace ConciliarApp.Services
                 Console.WriteLine($"Erro ao processar o arquivo TXT: {ex.Message}");
                 return new List<LancamentoExtrato>();
             }
+        }
+
+        public HashSet<LancamentoExcel> ExtrairLancamentosDoExcel(string caminhoArquivo, string cartao, out int linhaInicial)
+        {
+            FileInfo arquivoInfo = new FileInfo(caminhoArquivo);
+            linhaInicial = 0;
+
+            using (ExcelPackage pacote = new ExcelPackage(arquivoInfo))
+            {
+                ExcelWorksheet planilha = pacote.Workbook.Worksheets["2025-03"];
+                int qtdLinhas = planilha.Dimension.Rows;
+                bool encontrouCartaoDeCredito = false;
+                HashSet<LancamentoExcel> lancamentosExcel = new();
+
+                for (int linha = 1; linha <= qtdLinhas; linha++)
+                {
+                    string valor1aCelula = planilha.Cells[linha, 1].Text;
+                    string valor2aCelula = planilha.Cells[linha, 2].Text;
+                    string valor3aCelula = planilha.Cells[linha, 3].Text;
+
+                    if (valor1aCelula.Equals($"CARTÃO DE CRÉDITO: {cartao}", StringComparison.OrdinalIgnoreCase))
+                    {
+                        encontrouCartaoDeCredito = true;
+                        linhaInicial = linha + 1;
+                    }
+                    else if (encontrouCartaoDeCredito && valor2aCelula.Equals($"TOTAL ({cartao}):", StringComparison.OrdinalIgnoreCase))
+                    {
+                        encontrouCartaoDeCredito = false;
+                    }
+                    else if (encontrouCartaoDeCredito)
+                    {
+                        string valor = planilha.Cells[linha, 6].Text;
+                        string data = planilha.Cells[linha, 7].Text;
+                        string valor4aCelula = planilha.Cells[linha, 4].Text;
+                        var descricao = string.IsNullOrEmpty(valor4aCelula) ? $"{valor2aCelula} - {valor3aCelula}" : $"{valor3aCelula} - {valor4aCelula}";
+                        descricao = descricao.PadRight(50, ' ');
+
+                        if (LancamentoEhValido(data, valor, out DateTime dataConvertida, out decimal valorConvertido))
+                        {
+                            lancamentosExcel.Add(new LancamentoExcel
+                            {
+                                Data = dataConvertida,
+                                Valor = valorConvertido,
+                                Descricao = descricao,
+                                DiferencaDePequenoValor = false,
+                                NaoExisteNoExtrato = false
+                            });
+                        }
+                    }
+                }
+
+                return lancamentosExcel;
+            }
+        }
+
+        public void ExibirLancamentosDoExtrato(List<LancamentoExtrato> lancamentosTxt, string nomeArquivoExtrato)
+        {
+            Console.WriteLine();
+            Console.WriteLine($"LANÇAMENTOS DO EXTRATO: {lancamentosTxt.Count} | Arquivo: {nomeArquivoExtrato}");
+            decimal valorTotal = 0;
+            foreach (var lancamento in lancamentosTxt)
+            {
+                string descricaoTruncada = lancamento.Descricao.Truncate(50);
+                Console.WriteLine($"Data: {lancamento.Data.ToString("dd/MM/yyyy")}, Descrição: {descricaoTruncada}, Valor: {lancamento.Valor.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
+                valorTotal += lancamento.Valor;
+            }
+            Console.WriteLine($"Total Geral: {valorTotal.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
         }
 
         // Métodos de exibição
@@ -117,66 +133,33 @@ namespace ConciliarApp.Services
             Console.WriteLine($"Total Geral: {valorTotal.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
         }
 
-        public void ExibirLancamentosDoExtrato(List<LancamentoExtrato> lancamentosTxt, string nomeArquivoExtrato)
+        // public (int, decimal, HashSet<LancamentoExcel>) ProcessarArquivoExcel(string caminhoArquivo, string cartao)
+        // {
+        //     var lancamentosExcel = ExtrairLancamentosDoExcel(caminhoArquivo, cartao, out int linhaInicial);
+        //     int qtdLancamentosValidos = lancamentosExcel.Count;
+        //     decimal valorTotal = lancamentosExcel.Sum(l => l.Valor);
+
+        //     Console.WriteLine($"Total de lançamentos válidos lidos: {qtdLancamentosValidos}");
+        //     Console.WriteLine($"Total Geral: {valorTotal.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
+
+        //     return (qtdLancamentosValidos, valorTotal, lancamentosExcel);
+        // }
+
+        // public (int, decimal, List<LancamentoExtrato>) ProcessarArquivoTxt(string caminhoArquivo)
+        // {
+        //     var lancamentosTxt = ExtrairLancamentosDoExtrato(caminhoArquivo);
+        //     int qtdLancamentosValidos = lancamentosTxt.Count;
+        //     decimal valorTotal = lancamentosTxt.Sum(l => l.Valor);
+
+        //     Console.WriteLine($"Total de lançamentos válidos lidos: {qtdLancamentosValidos}");
+        //     Console.WriteLine($"Total Geral: {valorTotal.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
+
+        //     return (qtdLancamentosValidos, valorTotal, lancamentosTxt);
+        // }
+
+        public void ExibirLancamentosNoExtratoENaoNoExcel(List<LancamentoExtrato> lancamentosExtrato)
         {
-            Console.WriteLine();
-            Console.WriteLine($"LANÇAMENTOS DO EXTRATO: {lancamentosTxt.Count} | Arquivo: {nomeArquivoExtrato}");
-            decimal valorTotal = 0;
-            foreach (var lancamento in lancamentosTxt)
-            {
-                string descricaoTruncada = lancamento.Descricao.Truncate(50);
-                Console.WriteLine($"Data: {lancamento.Data.ToString("dd/MM/yyyy")}, Descrição: {descricaoTruncada}, Valor: {lancamento.Valor.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
-                valorTotal += lancamento.Valor;
-            }
-            Console.WriteLine($"Total Geral: {valorTotal.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
-        }
-
-        // Métodos existentes
-        public (int, decimal, HashSet<LancamentoExcel>) ProcessarArquivoExcel(string caminhoArquivo, string cartao)
-        {
-            var lancamentosExcel = ExtrairLancamentosDoExcel(caminhoArquivo, cartao, out int linhaInicial);
-            int qtdLancamentosValidos = lancamentosExcel.Count;
-            decimal valorTotal = lancamentosExcel.Sum(l => l.Valor);
-
-            Console.WriteLine($"Total de lançamentos válidos lidos: {qtdLancamentosValidos}");
-            Console.WriteLine($"Total Geral: {valorTotal.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
-
-            return (qtdLancamentosValidos, valorTotal, lancamentosExcel);
-        }
-
-        public (int, decimal, List<LancamentoExtrato>) ProcessarArquivoTxt(string caminhoArquivo)
-        {
-            var lancamentosTxt = ExtrairLancamentosDoExtrato(caminhoArquivo);
-            int qtdLancamentosValidos = lancamentosTxt.Count;
-            decimal valorTotal = lancamentosTxt.Sum(l => l.Valor);
-
-            Console.WriteLine($"Total de lançamentos válidos lidos: {qtdLancamentosValidos}");
-            Console.WriteLine($"Total Geral: {valorTotal.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
-
-            return (qtdLancamentosValidos, valorTotal, lancamentosTxt);
-        }
-
-        public void ExibirLancamentosNoExtratoENaoNoExcel(List<LancamentoExtrato> lancamentosTxt, HashSet<LancamentoExcel> lancamentosExcel)
-        {
-            var lancamentosNaoNoExcel = new List<LancamentoExtrato>();
-
-            foreach (var lancamento in lancamentosTxt)
-            {
-                if (lancamento.Descricao.Contains("ANUIDADE DIFERENCIADA") || lancamento.Descricao.Contains("DESC AUTOMATICO ANUD") || EhStreaming(lancamento.Descricao))
-                {
-                    if (!lancamentosExcel.Any(e => e.Valor == lancamento.Valor))
-                    {
-                        lancamentosNaoNoExcel.Add(lancamento);
-                    }
-                }
-                else
-                {
-                    if (!lancamentosExcel.Any(e => e.Data == lancamento.Data && e.Valor == lancamento.Valor))
-                    {
-                        lancamentosNaoNoExcel.Add(lancamento);
-                    }
-                }
-            }
+            var lancamentosNaoNoExcel = lancamentosExtrato.Where(l => !l.ExisteNoExcel).ToList();
 
             Console.WriteLine();
             Console.WriteLine($"LANÇAMENTOS NO EXTRATO E NÃO NO EXCEL: {lancamentosNaoNoExcel.Count}");
@@ -190,18 +173,9 @@ namespace ConciliarApp.Services
             Console.WriteLine($"Total Geral: {valorTotal.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
         }
 
-        public void ExibirLancamentosNoExcelENaoNoExtrato(HashSet<LancamentoExcel> lancamentosExcel, List<LancamentoExtrato> lancamentosTxt, List<LancamentoExcel> lancamentosComPequenaDiferenca)
+        public void ExibirLancamentosNoExcelENaoNoExtrato(HashSet<LancamentoExcel> lancamentosExcel)
         {
-            var lancamentosNaoNoExtrato = new List<LancamentoExcel>();
-
-            foreach (var lancamento in lancamentosExcel)
-            {
-                if (!lancamentosTxt.Any(t => t.Data == lancamento.Data && t.Valor == lancamento.Valor) && !lancamento.DiferencaDePequenoValor)
-                {
-                    lancamento.NaoExisteNoExtrato = true;
-                    lancamentosNaoNoExtrato.Add(lancamento);
-                }
-            }
+            var lancamentosNaoNoExtrato = lancamentosExcel.Where(l => l.NaoExisteNoExtrato).ToList();
 
             Console.WriteLine();
             Console.WriteLine($"LANÇAMENTOS NO EXCEL E NÃO NO EXTRATO: {lancamentosNaoNoExtrato.Count}");
@@ -215,24 +189,8 @@ namespace ConciliarApp.Services
             Console.WriteLine($"Total Geral: {valorTotal.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
         }
 
-        public HashSet<(DateTime Data, string Descricao, decimal ValorExcel, decimal ValorExtrato)> ExibirLancamentosComPequenaDiferenca(List<LancamentoExtrato> lancamentosTxt, HashSet<LancamentoExcel> lancamentosExcel)
+        public void ExibirLancamentosComPequenaDiferenca(List<(DateTime Data, string Descricao, decimal ValorExcel, decimal ValorExtrato)> lancamentosComPequenaDiferenca)
         {
-            var lancamentosComPequenaDiferenca = new HashSet<(DateTime Data, string Descricao, decimal ValorExcel, decimal ValorExtrato)>();
-
-            foreach (var lancamentoTxt in lancamentosTxt)
-            {
-                var lancamentoExcel = lancamentosExcel.FirstOrDefault(
-                    e => e.Data == lancamentoTxt.Data && 
-                    Math.Abs(e.Valor - lancamentoTxt.Valor) != 0 && 
-                    Math.Abs(e.Valor - lancamentoTxt.Valor) <= 0.15m);
-                if (lancamentoExcel != null)
-                {
-                    lancamentoExcel.DiferencaDePequenoValor = true;
-                    lancamentoTxt.ExisteNoExcel = true;
-                    lancamentosComPequenaDiferenca.Add((lancamentoExcel.Data, lancamentoExcel.Descricao, lancamentoExcel.Valor, lancamentoTxt.Valor));
-                }
-            }
-
             Console.WriteLine();
             Console.WriteLine($"LANÇAMENTOS COM PEQUENA DIFERENÇA: {lancamentosComPequenaDiferenca.Count}");
             decimal valorTotalExcel = 0;
@@ -246,8 +204,6 @@ namespace ConciliarApp.Services
             }
             Console.WriteLine($"Total Geral Excel: {valorTotalExcel.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
             Console.WriteLine($"Total Geral Extrato: {valorTotalExtrato.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
-
-            return lancamentosComPequenaDiferenca;
         }
 
         public void ExibirDiferencaEntreExtratoEExcel(int qtdLancamentosTxt, int qtdLancamentosExcel, decimal totalTxt, decimal totalExcel)
@@ -303,5 +259,44 @@ namespace ConciliarApp.Services
         {
             return lancamentosComPequenaDiferenca.Any(l => l.Item1 == lancamento.Item1 && l.Item2 == lancamento.Item2 && l.Item3 == lancamento.Item3);
         }
+
+        public LancamentosProcessados ExtrairEMarcarLancamentos(string caminhoArquivoExcel, string caminhoArquivoExtrato, string cartao)
+        {
+            var lancamentosProcessados = new LancamentosProcessados
+            {
+                LancamentosExtrato = ExtrairLancamentosDoExtrato(caminhoArquivoExtrato),
+                LancamentosExcel = ExtrairLancamentosDoExcel(caminhoArquivoExcel, cartao, out int linhaInicial),
+                LancamentosComPequenaDiferenca = new List<(DateTime Data, string Descricao, decimal ValorExcel, decimal ValorExtrato)>()
+            };
+
+            // Identificar lançamentos que não existem no excel e aqueles com pequena diferença
+            foreach (var lancamentoExtrato in lancamentosProcessados.LancamentosExtrato)
+            {
+                var lancamentoExcel = lancamentosProcessados.LancamentosExcel.FirstOrDefault(e => e.Data == lancamentoExtrato.Data && Math.Abs(e.Valor - lancamentoExtrato.Valor) <= 0.15m);
+                if (lancamentoExcel != null)
+                {
+                    lancamentoExtrato.ExisteNoExcel = (lancamentoExcel.Valor == lancamentoExtrato.Valor);
+                    lancamentoExcel.DiferencaDePequenoValor = (lancamentoExcel.Valor != lancamentoExtrato.Valor);
+                    if (lancamentoExcel.DiferencaDePequenoValor)
+                        lancamentosProcessados.LancamentosComPequenaDiferenca.Add((lancamentoExcel.Data, lancamentoExcel.Descricao, lancamentoExcel.Valor, lancamentoExtrato.Valor));
+                }
+            }
+
+            // Identificar lançamentos que não existem no extrato
+            foreach (var lancamentoExcel in lancamentosProcessados.LancamentosExcel)
+            {
+                if (!lancamentosProcessados.LancamentosExtrato.Any(t => t.Data == lancamentoExcel.Data && t.Valor == lancamentoExcel.Valor))
+                    lancamentoExcel.NaoExisteNoExtrato = true;
+            }
+
+            return lancamentosProcessados;
+        }
+    }
+
+    public class LancamentosProcessados
+    {
+        public HashSet<LancamentoExcel> LancamentosExcel { get; set; }
+        public List<LancamentoExtrato> LancamentosExtrato { get; set; }
+        public List<(DateTime Data, string Descricao, decimal ValorExcel, decimal ValorExtrato)> LancamentosComPequenaDiferenca { get; set; }
     }
 }

@@ -30,30 +30,25 @@ namespace ConciliarApp
 
             Console.WriteLine($"\r\n{DateTime.Now} | Iniciando processamento");
 
-            // Extrair lançamentos do extrato
-            List<LancamentoExtrato> lancamentosTxt = conciliacaoService.ExtrairLancamentosDoExtrato(caminhoArquivoExtrato);
-
-            // Extrair lançamentos do Excel
-            int linhaInicial;
-            HashSet<LancamentoExcel> lancamentosExcel = conciliacaoService.ExtrairLancamentosDoExcel(caminhoArquivoExcel, cartao, out linhaInicial);
+            var lancamentosProcessados = conciliacaoService.ExtrairEMarcarLancamentos(caminhoArquivoExcel, caminhoArquivoExtrato, cartao);
 
             // Exibir todos os lançamentos do extrato
-            conciliacaoService.ExibirLancamentosDoExtrato(lancamentosTxt, nomeArquivoExtrato);
+            conciliacaoService.ExibirLancamentosDoExtrato(lancamentosProcessados.LancamentosExtrato, nomeArquivoExtrato);
 
             // Exibir todos os lançamentos do Excel
-            conciliacaoService.ExibirLancamentosDoExcel(lancamentosExcel, cartao, linhaInicial);
+            conciliacaoService.ExibirLancamentosDoExcel(lancamentosProcessados.LancamentosExcel, cartao, 0);
 
             // Exibir a diferença entre o Excel e o TXT
-            conciliacaoService.ExibirDiferencaEntreExtratoEExcel(lancamentosTxt.Count, lancamentosExcel.Count, lancamentosTxt.Sum(l => l.Valor), lancamentosExcel.Sum(l => l.Valor));
+            conciliacaoService.ExibirDiferencaEntreExtratoEExcel(lancamentosProcessados.LancamentosExtrato.Count, lancamentosProcessados.LancamentosExcel.Count, lancamentosProcessados.LancamentosExtrato.Sum(l => l.Valor), lancamentosProcessados.LancamentosExcel.Sum(l => l.Valor));
 
             // Exibir lançamentos que estão no extrato e não estão no Excel
-            conciliacaoService.ExibirLancamentosNoExtratoENaoNoExcel(lancamentosTxt, lancamentosExcel);
+            conciliacaoService.ExibirLancamentosNoExtratoENaoNoExcel(lancamentosProcessados.LancamentosExtrato);
 
             // Exibir lançamentos que estão no Excel e não estão no extrato
-            conciliacaoService.ExibirLancamentosNoExcelENaoNoExtrato(lancamentosExcel, lancamentosTxt, new List<LancamentoExcel>());
+            conciliacaoService.ExibirLancamentosNoExcelENaoNoExtrato(lancamentosProcessados.LancamentosExcel);
 
             // Exibir lançamentos que estão em ambos, mas têm diferença de valor de até 15 centavos
-            var lancamentosComPequenaDiferenca = conciliacaoService.ExibirLancamentosComPequenaDiferenca(lancamentosTxt, lancamentosExcel);
+            conciliacaoService.ExibirLancamentosComPequenaDiferenca(lancamentosProcessados.LancamentosComPequenaDiferenca);
         }
     }
 }
