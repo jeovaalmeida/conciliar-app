@@ -13,24 +13,27 @@ namespace ConciliarApp
     {
         static void Main(string[] args)
         {
-            if (args.Length < 2)
+            if (args.Length < 3)
             {
-                Console.WriteLine("Por favor, informe o nome do cartão (ex: MASTER, VISA) e o nome do arquivo de extrato (TXT).");
+                Console.WriteLine("Por favor, informe o nome do cartão (ex: MASTER, VISA), o nome do arquivo de extrato (TXT) e o nome da planilha (ex: 2025-03).");
                 return;
             }
 
             string cartao = args[0].ToUpper();
             string nomeArquivoExtrato = args[1];
-            string caminhoArquivoExtrato = Path.Combine(@"C:\Users\jeova\OneDrive\FileSync\Extratos", nomeArquivoExtrato);
+            string nomePlanilha = args[2];
+            bool inserirLancamentos = args.Length > 3 && args[3].ToUpper() == "INSERIR";
+            string caminhoOneDrive = @"C:\Users\jeova\OneDrive\FileSync\";
+            string caminhoArquivoExtrato = Path.Combine(caminhoOneDrive + "Extratos", nomeArquivoExtrato);
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-            string caminhoArquivoExcel = @"C:\Users\jeova\OneDrive\FileSync\_ControleFin\RecDesp-2025.xlsx";
+            string caminhoArquivoExcel = caminhoOneDrive + @"_ControleFin\RecDesp-Fixas-Parc-2018-2025.xlsx";
 
             var conciliacaoService = new ConciliacaoService();
 
             Console.WriteLine($"\r\n{DateTime.Now} | Iniciando processamento");
 
-            var lancamentosProcessados = conciliacaoService.ExtrairEMarcarLancamentos(caminhoArquivoExcel, caminhoArquivoExtrato, cartao);
+            var lancamentosProcessados = conciliacaoService.ExtrairEMarcarLancamentos(caminhoArquivoExcel, caminhoArquivoExtrato, cartao, nomePlanilha);
 
             // Exibir todos os lançamentos do extrato
             conciliacaoService.ExibirLancamentosDoExtrato(lancamentosProcessados.LancamentosExtrato, nomeArquivoExtrato);
@@ -49,6 +52,13 @@ namespace ConciliarApp
 
             // Exibir lançamentos que estão em ambos, mas têm diferença de valor de até 15 centavos
             conciliacaoService.ExibirLancamentosComPequenaDiferenca(lancamentosProcessados.LancamentosComPequenaDiferenca);
+
+            // Inserir lançamentos do extrato que não estão no Excel, se o parâmetro INSERIR for fornecido
+            if (inserirLancamentos)
+            {
+                var lancamentosNaoNoExcel = lancamentosProcessados.LancamentosExtrato.Where(l => !l.ExisteNoExcel).ToList();
+                conciliacaoService.InserirLancamentosNoExcel(caminhoArquivoExcel, lancamentosNaoNoExcel, lancamentosProcessados.LinhaInsercao, nomePlanilha);
+            }
         }
     }
 }
