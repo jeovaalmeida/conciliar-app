@@ -266,8 +266,7 @@ namespace ConciliarApp.Services
                     return;
                 }
 
-                // Copiar a linha de inserção
-                planilha.InsertRow(linhaInsercao, lancamentosNaoNoExcel.Count, linhaInsercao);
+                CriarLinhasDuplicandoADeCopiarColar(lancamentosNaoNoExcel, linhaInsercao, planilha);
 
                 // Inserir os lançamentos do extrato
                 for (int i = 0; i < lancamentosNaoNoExcel.Count; i++)
@@ -290,7 +289,30 @@ namespace ConciliarApp.Services
                 // Salvar as alterações no arquivo Excel
                 pacote.Save();
 
-                Console.WriteLine($"\r\n{lancamentosNaoNoExcel.Count} lançamentos do extrato nao existentes no excel foram inseridos na planilha na linha {linhaInsercao}.");
+                Console.WriteLine($"\r\n{lancamentosNaoNoExcel.Count} lançamento(s) do extrato nao existente(s) no excel inserido(s) na planilha na linha {linhaInsercao}.");
+            }
+        }
+
+        private static void CriarLinhasDuplicandoADeCopiarColar(List<LancamentoExtrato> lancamentosNaoNoExcel, int linhaInsercao, ExcelWorksheet planilha)
+        {
+            // Inserir novas linhas
+            planilha.InsertRow(linhaInsercao, lancamentosNaoNoExcel.Count, linhaInsercao);
+
+            // Copiar o conteúdo da linha original para as novas linhas
+            for (int i = 0; i < lancamentosNaoNoExcel.Count; i++)
+            {
+                int linhaAtual = linhaInsercao + i;
+                for (int col = 1; col <= planilha.Dimension.Columns; col++)
+                {
+                    planilha.Cells[linhaAtual, col].Value = planilha.Cells[linhaInsercao - 1, col].Value;
+                    planilha.Cells[linhaAtual, col].StyleID = planilha.Cells[linhaInsercao - 1, col].StyleID;
+
+                    // Ajustar as fórmulas para referenciar a linha correta
+                    if (!string.IsNullOrEmpty(planilha.Cells[linhaInsercao - 1, col].Formula))
+                    {
+                        planilha.Cells[linhaAtual, col].FormulaR1C1 = planilha.Cells[linhaInsercao - 1, col].FormulaR1C1;
+                    }
+                }
             }
         }
 
