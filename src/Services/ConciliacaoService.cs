@@ -96,12 +96,12 @@ namespace ConciliarApp.Services
                                 NaoExisteNoExtrato = false
                             });
                         }
-                    }
 
-                    // Identificar a linha de inserção
-                    if (valor2aCelula == "(novo - copiar/colar)")
-                    {
-                        linhaInsercao = linha;
+                        // Identificar a linha de inserção
+                        if (valor2aCelula == "(novo - copiar/colar)")
+                        {
+                            linhaInsercao = linha;
+                        }
                     }
                 }
 
@@ -275,7 +275,10 @@ namespace ConciliarApp.Services
                     var lancamento = lancamentosNaoNoExcel[i];
                     int linhaAtual = linhaInsercao + i;
 
-                    planilha.Cells[linhaAtual, 4].Value = lancamento.Descricao;
+                    var (categoria, fornecedor) = ObterCategoriaEFornecedor(lancamento);
+
+                    planilha.Cells[linhaAtual, 2].Value = categoria ?? string.Empty;
+                    planilha.Cells[linhaAtual, 3].Value = fornecedor ?? lancamento.Descricao;
                     planilha.Cells[linhaAtual, 6].Value = lancamento.Valor;
                     planilha.Cells[linhaAtual, 7].Value = lancamento.Data.ToString("dd/MM/yyyy");
 
@@ -287,8 +290,22 @@ namespace ConciliarApp.Services
                 // Salvar as alterações no arquivo Excel
                 pacote.Save();
 
-                Console.WriteLine($"\r\n{lancamentosNaoNoExcel.Count} lançamentos do extrato nao existentes no excel foram inseridos na planilha.");
+                Console.WriteLine($"\r\n{lancamentosNaoNoExcel.Count} lançamentos do extrato nao existentes no excel foram inseridos na planilha na linha {linhaInsercao}.");
             }
+        }
+
+        private (string, string) ObterCategoriaEFornecedor(LancamentoExtrato lancamento)
+        {
+            if (lancamento.Descricao.Contains("RDSAUDE"))
+                return ("Farmácia - Remédios - ", "Drogasil");
+            else if (lancamento.Descricao.Contains("MSCAP"))
+                return ("Loteria", "Ms Cap");    
+            else if (lancamento.Descricao.Contains("PAG POKO"))
+                return ("Mercado", "Pag Poko");
+            else if (lancamento.Descricao.Contains("ASSAI"))
+                return ("Mercado", "Assaí");
+
+            return (null, null);
         }
     }
 
