@@ -18,15 +18,13 @@ namespace ConciliarApp.Services
             try
             {
                 var linhas = File.ReadAllLines(caminhoArquivo);
-                List<LancamentoExtrato> lancamentosTxt = new List<LancamentoExtrato>();
+                List<LancamentoExtrato> lancamentosTxt = new();
 
                 foreach (var linha in linhas)
                 {
                     if (LinhaEhValida(linha))
                     {
-                        string parteData = linha.Substring(0, 10).Trim();
-                        string descricao = linha.Substring(10, linha.Length - 30).Trim();
-                        string parteValor = linha.Substring(linha.Length - 20, 10).Trim();
+                        var (parteData, descricao, parteValor) = ExtrairDadosDoLancamento(linha);
 
                         if (LancamentoEhValido(parteData, parteValor, out DateTime dataConvertida, out decimal valorConvertido))
                         {
@@ -221,8 +219,8 @@ namespace ConciliarApp.Services
         {
             var lancamentosProcessados = new LancamentosProcessados
             {
-                LancamentosExcel = ExtrairLancamentosDoExcel(caminhoArquivoExcel, cartao, nomePlanilha, out int linhaInicial, out int linhaInsercao),
                 LancamentosExtrato = ExtrairLancamentosDoExtrato(caminhoArquivoExtrato),
+                LancamentosExcel = ExtrairLancamentosDoExcel(caminhoArquivoExcel, cartao, nomePlanilha, out int linhaInicial, out int linhaInsercao),
                 LancamentosComPequenaDiferenca = new List<(DateTime Data, string Descricao, decimal ValorExcel, decimal ValorExtrato)>(),
                 LinhaInsercao = linhaInsercao
             };
@@ -250,6 +248,36 @@ namespace ConciliarApp.Services
             }
 
             return lancamentosProcessados;
+        }
+
+        private (string Data, string Descricao, string Valor) ExtrairDadosDoLancamento(string linha)
+        {
+            // temos 2 formatos de extrato:
+            // - o extrato mensal
+            // - o extrato de lançamentos da próxima fatura, que vem com a data neste formato: dd/MM
+            // o layout muda um pouco pra cada um deles
+
+            var ehLayoutLancFuturo =  linha.Substring(0, 9).EndsWith("   ");
+
+            if (ehLayoutLancFuturo) 
+            {
+                var parteData = linha.Substring(0, 5) + "/" + DateTime.Now.Year;
+                var dataAsDate = Convert.ToDateTime(parteData);
+                if (dataAsDate > DateTime.Now)
+                {
+                    parteData = linha.Substring(0, 5) + "/" + (DateTime.Now.Year - 1);
+                }
+                var descricao = linha.Substring(9, linha.Length - 30).Trim();
+                var parteValor = linha.Substring(linha.Length - 20, 10).Trim();
+                return (parteData, descricao, parteValor);
+            }
+            else            
+            {
+                var parteData = linha.Substring(0, 10).Trim();
+                var descricao = linha.Substring(10, linha.Length - 30).Trim();
+                var parteValor = linha.Substring(linha.Length - 20, 10).Trim();
+                return (parteData, descricao, parteValor);
+            }
         }
 
         public void InserirLancamentosNoExcel(string caminhoArquivoExcel, List<LancamentoExtrato> lancamentosNaoNoExcel, int linhaInsercao, string nomePlanilha)
@@ -320,12 +348,36 @@ namespace ConciliarApp.Services
         {
             if (lancamento.Descricao.Contains("RDSAUDE"))
                 return ("Farmácia - Remédios - ", "Drogasil");
+            else if (lancamento.Descricao.Contains("Farmacias Grupo F27"))
+                return ("Farmácia - Remédios - ", "Levi");
+            else if (lancamento.Descricao.Contains("DROGARIA"))
+                return ("Farmácia - Remédios - ", null);
             else if (lancamento.Descricao.Contains("MSCAP"))
                 return ("Loteria", "Ms Cap");    
+            else if (lancamento.Descricao.Contains("COMBUSTIVE"))
+                return ("Veículos - Fox 2014 - Abastecimento", null);    
+            else if (lancamento.Descricao.Contains("EbenezerFrangoAss"))
+                return ("Restaurante - Marmita", "Assados da Mata");    
+            else if (lancamento.Descricao.Contains("TRIGUEIRO"))
+                return ("Padaria", "O Trigueiro");
             else if (lancamento.Descricao.Contains("PAG POKO"))
                 return ("Mercado", "Pag Poko");
             else if (lancamento.Descricao.Contains("ASSAI"))
                 return ("Mercado", "Assaí");
+            else if (lancamento.Descricao.Contains("COMPER"))
+                return ("Mercado", "Comper");
+            else if (lancamento.Descricao.Contains("EMPORIOLC"))
+                return ("Mercado", "Lúcia");
+            else if (lancamento.Descricao.Contains("ATACADAO"))
+                return ("Mercado", "Atacadão");
+            else if (lancamento.Descricao.Contains("MERCADINHO DO MIRO"))
+                return ("Restaurante - Carne Assada", "Miro");
+            else if (lancamento.Descricao.Contains("SUPERMERCADO"))
+                return ("Mercado", null);
+            else if (lancamento.Descricao.Contains("RESTAURANTE"))
+                return ("Restaurante", null);
+            else if (lancamento.Descricao.Contains("DirceCenturion"))
+                return ("Salão de Beleza - Rozi", "Dirce");
 
             return (null, null);
         }

@@ -56,8 +56,8 @@ namespace ConciliarApp
             // Inserir lançamentos do extrato que não estão no Excel, se o parâmetro INSERIR for fornecido
             if (inserirLancamentos)
             {
-                var lancamentosNaoNoExcel = lancamentosProcessados.LancamentosExtrato.Where(l => !l.ExisteNoExcel).ToList();
-                conciliacaoService.InserirLancamentosNoExcel(caminhoArquivoExcel, lancamentosNaoNoExcel, lancamentosProcessados.LinhaInsercao, nomePlanilha);
+                var lancamentosQueNaoEstaoNoExcel = lancamentosProcessados.LancamentosExtrato.Where(l => !l.ExisteNoExcel).ToList();
+                conciliacaoService.InserirLancamentosNoExcel(caminhoArquivoExcel, lancamentosQueNaoEstaoNoExcel, lancamentosProcessados.LinhaInsercao, nomePlanilha);
             }
         }
     }
