@@ -57,7 +57,15 @@ namespace ConciliarApp
             if (inserirLancamentos)
             {
                 var lancamentosQueNaoEstaoNoExcel = lancamentosProcessados.LancamentosExtrato.Where(l => !l.ExisteNoExcel).ToList();
-                conciliacaoService.InserirLancamentosNoExcel(caminhoArquivoExcel, lancamentosQueNaoEstaoNoExcel, lancamentosProcessados.LinhaInsercao, nomePlanilha);
+                if (lancamentosQueNaoEstaoNoExcel.Any())
+                {
+                    conciliacaoService.InserirLancamentosNoExcel(caminhoArquivoExcel, lancamentosQueNaoEstaoNoExcel, lancamentosProcessados.LinhaInsercao, nomePlanilha);
+                }
+                else            
+                {
+                    Console.WriteLine("\r\nNão há lançamentos para inserir no Excel.");
+                }
+                    
             }
         }
     }

@@ -169,10 +169,9 @@ namespace ConciliarApp.Services
         {
             Console.WriteLine();
             Console.WriteLine($"DIFERENÇA ENTRE EXTRATO x EXCEL (Extrato: {qtdLancamentosTxt}, Excel: {qtdLancamentosExcel})");
-            var diferenca = qtdLancamentosTxt - qtdLancamentosExcel;
-            var sinal = diferenca < 0 ? "-" : diferenca > 0 ? "+" : "";
-            Console.WriteLine($"  Qtde de lançamentos: {sinal}{diferenca}");
-            Console.WriteLine($"  Valor: {(totalTxt - totalExcel).ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
+            var diferenca = Math.Abs(qtdLancamentosTxt - qtdLancamentosExcel);
+            Console.WriteLine($"  Qtde de lançamentos: {diferenca}");
+            Console.WriteLine($"  Valor: {Math.Abs(totalTxt - totalExcel).ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
         }
 
         public void ExibirLancamentosComPequenaDiferenca(List<(DateTime Data, string Descricao, decimal ValorExcel, decimal ValorExtrato)> lancamentosComPequenaDiferenca)
@@ -360,12 +359,16 @@ namespace ConciliarApp.Services
                 return ("Restaurante - Marmita", "Assados da Mata");    
             else if (lancamento.Descricao.Contains("TRIGUEIRO"))
                 return ("Padaria", "O Trigueiro");
+            else if (lancamento.Descricao.Contains("GRAN DONA LOURDES"))
+                return ("Lanche - Evelyn", "Gran Dona Lourdes");
             else if (lancamento.Descricao.Contains("PAG POKO"))
                 return ("Mercado", "Pag Poko");
             else if (lancamento.Descricao.Contains("ASSAI"))
                 return ("Mercado", "Assaí");
             else if (lancamento.Descricao.Contains("COMPER"))
                 return ("Mercado", "Comper");
+            else if (lancamento.Descricao.Contains("R L SUPERMERCADOS"))
+                return ("Mercado", "Lunardi");
             else if (lancamento.Descricao.Contains("EMPORIOLC"))
                 return ("Mercado", "Lúcia");
             else if (lancamento.Descricao.Contains("ATACADAO"))
