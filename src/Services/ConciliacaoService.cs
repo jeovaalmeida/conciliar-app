@@ -174,18 +174,20 @@ namespace ConciliarApp.Services
             Console.WriteLine($"  Valor: {Math.Abs(totalTxt - totalExcel).ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
         }
 
-        public void ExibirLancamentosComPequenaDiferenca(List<(DateTime Data, string Descricao, decimal ValorExcel, decimal ValorExtrato)> lancamentosComPequenaDiferenca)
+        public void ExibirLancamentosComPequenaDiferenca(List<(DateTime Data, string DescricaoExcel, string DescricaoExtrato, decimal ValorExcel, decimal ValorExtrato)> lancamentosComPequenaDiferenca)
         {
             Console.WriteLine();
             Console.WriteLine($"LANÇAMENTOS COM PEQUENA DIFERENÇA: {lancamentosComPequenaDiferenca.Count}");
             decimal valorTotalExcel = 0;
             decimal valorTotalExtrato = 0;
+
             foreach (var lancamento in lancamentosComPequenaDiferenca)
             {
-                Console.WriteLine($"Data: {lancamento.Data.ToString("dd/MM/yyyy")}, Descrição: {lancamento.Descricao}, Valor Excel: {lancamento.ValorExcel.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}, Valor Extrato: {lancamento.ValorExtrato.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
+                Console.WriteLine($"Data: {lancamento.Data.ToString("dd/MM/yyyy")}, Descrição: {lancamento.DescricaoExcel.Trim()} | {lancamento.DescricaoExtrato.Trim()}, Valor Excel: {lancamento.ValorExcel.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}, Valor Extrato: {lancamento.ValorExtrato.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
                 valorTotalExcel += lancamento.ValorExcel;
                 valorTotalExtrato += lancamento.ValorExtrato;
             }
+
             Console.WriteLine($"Total Geral Excel: {valorTotalExcel.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
             Console.WriteLine($"Total Geral Extrato: {valorTotalExtrato.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))}");
         }
@@ -220,20 +222,30 @@ namespace ConciliarApp.Services
             {
                 LancamentosExtrato = ExtrairLancamentosDoExtrato(caminhoArquivoExtrato),
                 LancamentosExcel = ExtrairLancamentosDoExcel(caminhoArquivoExcel, cartao, nomePlanilha, out int linhaInicial, out int linhaInsercao),
-                LancamentosComPequenaDiferenca = new List<(DateTime Data, string Descricao, decimal ValorExcel, decimal ValorExtrato)>(),
+                LancamentosComPequenaDiferenca = new List<(DateTime Data, string DescricaoExcel, string DescricaoExtrato, decimal ValorExcel, decimal ValorExtrato)>(),
                 LinhaInsercao = linhaInsercao
             };
 
             foreach (var lancamentoTxt in lancamentosProcessados.LancamentosExtrato)
             {
-                var lancamentoExcel = lancamentosProcessados.LancamentosExcel.FirstOrDefault(e => e.Data == lancamentoTxt.Data && Math.Abs(e.Valor - lancamentoTxt.Valor) <= 0.15m);
+                var lancamentoExcel = lancamentosProcessados.LancamentosExcel.FirstOrDefault(e => e.Data == lancamentoTxt.Data && e.Valor == lancamentoTxt.Valor);
+                if (lancamentoExcel == null) // nao encontrou com data e valor exatos, procurar por aproximacao
+                {
+                    lancamentoExcel = lancamentosProcessados.LancamentosExcel.FirstOrDefault(e => e.Data == lancamentoTxt.Data && Math.Abs(e.Valor - lancamentoTxt.Valor) <= 0.3m);
+                }
                 if (lancamentoExcel != null)
                 {
                     lancamentoTxt.ExisteNoExcel = (lancamentoExcel.Valor == lancamentoTxt.Valor);
-                    lancamentoExcel.DiferencaDePequenoValor = (lancamentoExcel.Valor != lancamentoTxt.Valor);
-                    if (lancamentoExcel.DiferencaDePequenoValor )
+                    lancamentoExcel.DiferencaDePequenoValor = !lancamentoTxt.ExisteNoExcel; // && (lancamentoExcel.Valor != lancamentoTxt.Valor);
+                    if (lancamentoExcel.DiferencaDePequenoValor)
                     {
-                        lancamentosProcessados.LancamentosComPequenaDiferenca.Add((lancamentoExcel.Data, lancamentoExcel.Descricao, lancamentoExcel.Valor, lancamentoTxt.Valor));
+                        lancamentosProcessados.LancamentosComPequenaDiferenca.Add((
+                            lancamentoExcel.Data,
+                            lancamentoExcel.Descricao,
+                            lancamentoTxt.Descricao,  
+                            lancamentoExcel.Valor,
+                            lancamentoTxt.Valor
+                        ));
                     }
                 }
             }
@@ -345,20 +357,26 @@ namespace ConciliarApp.Services
 
         private (string, string) ObterCategoriaEFornecedor(LancamentoExtrato lancamento)
         {
-            if (lancamento.Descricao.Contains("RDSAUDE"))
+            if (lancamento.Descricao.Contains("RDSAUDE") || lancamento.Descricao.Contains("DROGASIL"))
                 return ("Farmácia - Remédios - ", "Drogasil");
             else if (lancamento.Descricao.Contains("Farmacias Grupo F27"))
                 return ("Farmácia - Remédios - ", "Levi");
             else if (lancamento.Descricao.Contains("DROGARIA"))
                 return ("Farmácia - Remédios - ", null);
+            else if (lancamento.Descricao.Contains("AZPT"))
+                return ("Farmácia - Remédios - ", "Freire");
+            else if (lancamento.Descricao.ToLower().Contains("farm ") || lancamento.Descricao.ToLower().Contains("farmacia"))
+                return ("Farmácia - Remédios - ", lancamento.Descricao);
             else if (lancamento.Descricao.Contains("MSCAP"))
-                return ("Loteria", "Ms Cap");    
-            else if (lancamento.Descricao.Contains("COMBUSTIVE"))
-                return ("Veículos - Fox 2014 - Abastecimento", null);    
-            else if (lancamento.Descricao.Contains("EbenezerFrangoAss"))
-                return ("Restaurante - Marmita", "Assados da Mata");    
+                return ("Loteria", "Ms Cap");
+            else if (lancamento.Descricao.Contains("COMBUSTIVE") || lancamento.Descricao.Contains("AUTO POSTO CARANDA") || lancamento.Descricao.ToUpper().Contains("ABASTECE AI"))
+                return ("Veículos - Fox 2014 - Abastecimento", null);
+            else if (lancamento.Descricao.Contains("EbenezerFrangoAss") || lancamento.Descricao.ToUpper().Contains("ASSADOS DA MATA"))
+                return ("Restaurante - Marmita", "Assados da Mata");
             else if (lancamento.Descricao.Contains("TRIGUEIRO"))
                 return ("Padaria", "O Trigueiro");
+            else if (lancamento.Descricao.ToUpper().Contains("TRIGOSDAMATA"))
+                return ("Padaria", "Trigos Da Mata");
             else if (lancamento.Descricao.Contains("GRAN DONA LOURDES"))
                 return ("Lanche - Evelyn", "Gran Dona Lourdes");
             else if (lancamento.Descricao.Contains("PAG POKO"))
@@ -371,16 +389,32 @@ namespace ConciliarApp.Services
                 return ("Mercado", "Lunardi");
             else if (lancamento.Descricao.Contains("EMPORIOLC"))
                 return ("Mercado", "Lúcia");
+            else if (lancamento.Descricao.Contains("MISTER J"))
+                return ("Cerveja", "Mister Júnior");
             else if (lancamento.Descricao.Contains("ATACADAO"))
                 return ("Mercado", "Atacadão");
             else if (lancamento.Descricao.Contains("MERCADINHO DO MIRO"))
                 return ("Restaurante - Carne Assada", "Miro");
             else if (lancamento.Descricao.Contains("SUPERMERCADO"))
-                return ("Mercado", null);
+                return ("Mercado", lancamento.Descricao);
             else if (lancamento.Descricao.Contains("RESTAURANTE"))
-                return ("Restaurante", null);
+                return ("Restaurante", lancamento.Descricao);
+            else if (lancamento.Descricao.ToUpper().Contains("PIZZARIA"))
+                return ("Lazer - Pizzaria", lancamento.Descricao);
             else if (lancamento.Descricao.Contains("DirceCenturion"))
                 return ("Salão de Beleza - Rozi", "Dirce");
+            else if (lancamento.Descricao.Contains("SHOPEE"))
+                return ("Diversos - Compras Online", "Shopee");
+            else if (lancamento.Descricao.Contains("ALIANCAAGUA"))
+                return ("Gás", "Aliança Gás ");
+            else if (lancamento.Descricao.ToUpper().Contains("ROBERTO "))
+                return ("Sacolão", "Roberto Lopes");
+            else if (lancamento.Descricao.ToUpper().Contains(" SODIVI"))
+                return ("Software - Assinatura", "Só Dividendos");
+            else if (lancamento.Descricao.ToUpper().Contains(" SODIVI"))
+                return ("Software - Assinatura", "Só Dividendos");
+            else if (lancamento.Descricao.ToUpper().Contains("CAMPO GRANDE PARKING") || lancamento.Descricao.ToUpper().Contains("ESTACIONAMENT"))
+                return ("Estacionamento", lancamento.Descricao);
 
             return (null, null);
         }
@@ -390,7 +424,7 @@ namespace ConciliarApp.Services
     {
         public HashSet<LancamentoExcel> LancamentosExcel { get; set; }
         public List<LancamentoExtrato> LancamentosExtrato { get; set; }
-        public List<(DateTime Data, string Descricao, decimal ValorExcel, decimal ValorExtrato)> LancamentosComPequenaDiferenca { get; set; }
+        public List<(DateTime Data, string DescricaoExcel, string DescricaoExtrato, decimal ValorExcel, decimal ValorExtrato)> LancamentosComPequenaDiferenca { get; set; }
         public int LinhaInsercao { get; set; }
     }
 }
