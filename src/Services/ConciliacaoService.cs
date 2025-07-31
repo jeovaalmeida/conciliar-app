@@ -279,14 +279,14 @@ namespace ConciliarApp.Services
                     parteData = linha.Substring(0, 5) + "/" + (DateTime.Now.Year - 1);
                 }
                 var descricao = linha.Substring(9, linha.Length - 30).Trim();
-                var parteValor = linha.Substring(linha.Length - 20, 10).Trim();
+                var parteValor = linha.Substring(linha.Length - 22, 12).Trim();
                 return (parteData, descricao, parteValor);
             }
             else            
             {
                 var parteData = linha.Substring(0, 10).Trim();
                 var descricao = linha.Substring(10, linha.Length - 30).Trim();
-                var parteValor = linha.Substring(linha.Length - 20, 10).Trim();
+                var parteValor = linha.Substring(linha.Length - 22, 12).Trim();
                 return (parteData, descricao, parteValor);
             }
         }
