@@ -79,7 +79,10 @@ namespace ConciliarApp.Services
                     else if (encontrouCartaoDeCredito)
                     {
                         string valor = planilha.Cells[linha, 6].Text;
-                        string data = planilha.Cells[linha, 7].Text;
+                        string mesCorrente = DateTime.Now.Month.ToString("D2");
+                        string mesAnterior = DateTime.Now.AddMonths(-1).ToString("MM");
+                        // lê data do excel tratando datas com valor MM p/ mês corrente e M-1 para mês anterior
+                        string data = planilha.Cells[linha, 7].Text.Replace("MM", mesCorrente).Replace("M-1", mesAnterior);
                         string valor4aCelula = planilha.Cells[linha, 4].Text;
                         var descricao = string.IsNullOrEmpty(valor4aCelula) ? $"{valor2aCelula} - {valor3aCelula}" : $"{valor3aCelula} - {valor4aCelula}";
 
@@ -369,8 +372,14 @@ namespace ConciliarApp.Services
                 return ("Farmácia - Remédios - ", lancamento.Descricao);
             else if (lancamento.Descricao.Contains("MSCAP"))
                 return ("Loteria", "Ms Cap");
+            else if (lancamento.Descricao.Contains("LOCATELL")) 
+                return ("Veículos - Fox 2014 - Abastecimento", "Posto Locatelli");
+            else if (lancamento.Descricao.Contains("POSTO CARANDA")) 
+                return ("Veículos - Fox 2014 - Abastecimento", "Posto Carandá");
             else if (lancamento.Descricao.Contains("COMBUSTIVE") || lancamento.Descricao.Contains("AUTO POSTO CARANDA") || lancamento.Descricao.ToUpper().Contains("ABASTECE AI"))
                 return ("Veículos - Fox 2014 - Abastecimento", null);
+            else if (lancamento.Descricao.Contains("SERTAO COMERCIAL") || lancamento.Descricao.Contains("PETEL MATER") || lancamento.Descricao.Contains("LIMA MAT")) 
+                return ("Material Construção - ", lancamento.Descricao);
             else if (lancamento.Descricao.Contains("EbenezerFrangoAss") || lancamento.Descricao.ToUpper().Contains("ASSADOS DA MATA"))
                 return ("Restaurante - Marmita", "Assados da Mata");
             else if (lancamento.Descricao.Contains("TRIGUEIRO"))
@@ -397,6 +406,8 @@ namespace ConciliarApp.Services
                 return ("Restaurante - Carne Assada", "Miro");
             else if (lancamento.Descricao.Contains("SUPERMERCADO"))
                 return ("Mercado", lancamento.Descricao);
+            else if (lancamento.Descricao.Contains("ANESIA RESTAURANTE"))
+                return ("Restaurante", "Anesia Restaurante");
             else if (lancamento.Descricao.Contains("RESTAURANTE"))
                 return ("Restaurante", lancamento.Descricao);
             else if (lancamento.Descricao.ToUpper().Contains("PIZZARIA"))
