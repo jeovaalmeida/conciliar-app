@@ -380,14 +380,21 @@ namespace ConciliarApp.Services
                 return ("Veículos - Fox 2014 - Abastecimento", null);
             else if (lancamento.Descricao.Contains("SERTAO COMERCIAL") || lancamento.Descricao.Contains("PETEL MATER") || lancamento.Descricao.Contains("LIMA MAT")) 
                 return ("Material Construção - ", lancamento.Descricao);
-            else if (lancamento.Descricao.Contains("EbenezerFrangoAss") || lancamento.Descricao.ToUpper().Contains("ASSADOS DA MATA"))
-                return ("Restaurante - Marmita", "Assados da Mata");
-            else if (lancamento.Descricao.Contains("TRIGUEIRO"))
-                return ("Padaria", "O Trigueiro");
+            else if (lancamento.Descricao.Contains("EbenezerFrangoAss") ||
+                     lancamento.Descricao.ToUpper().Contains("ASSADOS DA MATA") ||
+                     lancamento.Descricao.ToUpper().Contains("ASSADOS Q DELICIA"))
+                return ("Restaurante - Marmita", lancamento.Descricao);
+            else if (lancamento.Descricao.Contains("TRIGUEIRO") || 
+                     lancamento.Descricao.ToUpper().Contains("48232187MARIO") ||
+                     lancamento.Descricao.ToLower().Contains("padaria"))
+                return ("Padaria", lancamento.Descricao);
             else if (lancamento.Descricao.ToUpper().Contains("TRIGOSDAMATA"))
                 return ("Padaria", "Trigos Da Mata");
-            else if (lancamento.Descricao.Contains("GRAN DONA LOURDES"))
-                return ("Lanche - Evelyn", "Gran Dona Lourdes");
+            else if (lancamento.Descricao.Contains("GRAN DONA LOURDES") ||
+                     lancamento.Descricao.Contains("MARSUPS LANCHES") ||
+                     lancamento.Descricao.Contains("BURGER KING") ||
+                     lancamento.Descricao.Contains("DAVALO E CARDOSO LTDA"))
+                return ("Lanche - Evelyn", lancamento.Descricao);
             else if (lancamento.Descricao.Contains("PAG POKO"))
                 return ("Mercado", "Pag Poko");
             else if (lancamento.Descricao.Contains("ASSAI"))
@@ -396,7 +403,8 @@ namespace ConciliarApp.Services
                 return ("Mercado", "Comper");
             else if (lancamento.Descricao.Contains("R L SUPERMERCADOS"))
                 return ("Mercado", "Lunardi");
-            else if (lancamento.Descricao.Contains("EMPORIOLC"))
+            else if (lancamento.Descricao.Contains("EMPORIOLC") || 
+                     lancamento.Descricao.Contains("MP *DIOGO"))
                 return ("Mercado", "Lúcia");
             else if (lancamento.Descricao.Contains("MISTER J"))
                 return ("Cerveja", "Mister Júnior");
@@ -418,13 +426,18 @@ namespace ConciliarApp.Services
                 return ("Diversos - Compras Online", "Shopee");
             else if (lancamento.Descricao.Contains("ALIANCAAGUA"))
                 return ("Gás", "Aliança Gás ");
+            else if (lancamento.Descricao.ToUpper().Contains("GAS"))
+                return ("Gás", lancamento.Descricao);
             else if (lancamento.Descricao.ToUpper().Contains("ROBERTO "))
                 return ("Sacolão", "Roberto Lopes");
             else if (lancamento.Descricao.ToUpper().Contains(" SODIVI"))
                 return ("Software - Assinatura", "Só Dividendos");
             else if (lancamento.Descricao.ToUpper().Contains(" SODIVI"))
                 return ("Software - Assinatura", "Só Dividendos");
-            else if (lancamento.Descricao.ToUpper().Contains("CAMPO GRANDE PARKING") || lancamento.Descricao.ToUpper().Contains("ESTACIONAMENT"))
+            else if (lancamento.Descricao.ToUpper().Contains("CAMPO GRANDE PARKING") 
+                || lancamento.Descricao.ToUpper().Contains("ESTACIONAMENT")
+                || lancamento.Descricao.ToUpper().Contains("ALLPARK EMPREENDIMENTO")
+                || lancamento.Descricao.ToUpper().Contains("SALA32"))
                 return ("Estacionamento", lancamento.Descricao);
 
             return (null, null);

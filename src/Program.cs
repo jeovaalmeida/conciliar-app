@@ -26,8 +26,7 @@ namespace ConciliarApp
             string caminhoOneDrive = @"C:\Users\jeova\OneDrive\FileSync\";
             string caminhoArquivoExtrato = Path.Combine(caminhoOneDrive + "Extratos", nomeArquivoExtrato);
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
-            string caminhoArquivoExcel = caminhoOneDrive + @"_ControleFin\RecDesp-Fixas-Parc-2018-2025.xlsx";
+            string caminhoArquivoExcel = caminhoOneDrive + @"_ControleFin\RecDesp-Fixas-Parc-2018-2026.xlsx";
 
             var conciliacaoService = new ConciliacaoService();
 
