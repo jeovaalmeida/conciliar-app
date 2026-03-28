@@ -23,14 +23,14 @@ namespace ConciliarApp
             string nomeArquivoExtrato = args[1];
             string nomePlanilha = args[2];
             bool inserirLancamentos = args.Length > 3 && args[3].ToUpper() == "INSERIR";
-            string caminhoOneDrive = @"C:\Users\jeova\OneDrive\FileSync\";
+            string caminhoOneDrive = @"C:\MyStuff\OneDrive\FileSync\"; // @"C:\Users\jeova\OneDrive\FileSync\";
             string caminhoArquivoExtrato = Path.Combine(caminhoOneDrive + "Extratos", nomeArquivoExtrato);
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
             string caminhoArquivoExcel = caminhoOneDrive + @"_ControleFin\RecDesp-Fixas-Parc-2018-2026.xlsx";
 
             var conciliacaoService = new ConciliacaoService();
 
-            Console.WriteLine($"\r\n{DateTime.Now} | Iniciando processamento");
+            Console.WriteLine($"\r\n{DateTime.Now} | Iniciando processamento | Planilha '{nomePlanilha}'");
 
             var lancamentosProcessados = conciliacaoService.ExtrairEMarcarLancamentos(caminhoArquivoExcel, caminhoArquivoExtrato, cartao, nomePlanilha);
 
